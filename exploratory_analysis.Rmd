@@ -1,0 +1,143 @@
+---
+title: "Human OA Diffusion Study: Exploratory Analysis"
+output: html_notebook
+---
+
+This notebook provides a first look at the data aquired as part of the FCS/RICS study of human osteoarthritic (OA) cartilage.  Multiple 3mm cartilage plugs of varying OA severity (ICRS grading system) were pulled from the tissue removed from patients undergoing total knee arthroplasty.  Samples were saturated in FITC and 3k Texas Red Dextran solutions and imaged using both FCS and RICS (Image correlation spectroscopy techniques) to quantify the diffusion coefficients of each molecule.  Samples were also characterized mechanically and chemically to yeild modulus, permeability, and compositional data.
+
+The main hypothesis was that diffusivity would increase with OA severity.  We also are interested to see if we can detect changes in the mechanical and compositional properties that would be associated with diffusivity changes.
+
+With arthroscopic microscopy instruments becoming more advanced, sophisticated imaging techiques like FCS and RICS could be used to identify OA before macrscopic damage occurs, by detecting sublte changes in the diffusivity of small molecules that would indicate alterations in the tissue matrix.
+
+## Data
+### Import Data
+Import the raw data from the excel file
+```{r}
+
+library(tidyverse)
+library(readxl)
+library(forcats)
+
+# Import raw data
+fullpath <- "~/Dropbox/Manuscripts/2018 FCS and RICS/data_and_stats/HumanCartilageStudy_Patients1_5.xlsx"
+df <- read_excel(fullpath)
+
+df
+```
+
+### Tidy Data
+The data needs to be tidy before we do any analysis.  We'll convert patient, plug, and ICRS score to factors and create new variables  to denote the imaging technique and solute used for each observation.  Here is summary of our variable types:
+
+__Predictors__  
+
+Name | Variable Type | Description  
+---- | ------------- | ------------------------------------------------------------------  
+pat  | nominal | patient number (n = 5)  
+plug | nominal | number of plug that was taken from patient (14-16 per patient)  
+score | ordinal | ICRS cartilage OA score (range evaluated = 0-2, higher number = increasing severity)  
+ICS | nominal | Image correlation spectroscopy method (FCS or RICS)  
+sol | nominal | Solute FITC or 3k Dextran Texas Red)  
+
+__Response Variables__
+
+Name | Variable Type | Description  
+---- | ------------- | ------------------------------------------------------------------  
+diff  | continuous | Diffusion Coefficient
+modcomp | continuous | Compressive Modulus
+modten | continuous | Tensile Modulus
+perm_m | continuous | Permeability exponential coefficient
+perm_k0 | continuous | Permeability scalar coefficient
+mechr2 | continuous | R-squared value for mechanical property fit
+
+
+```{r}
+# Rename columns
+namestr <- c("pat","plug","score","FCS_FITC","RICS_FITC","FCS_3k","RICS_3k","modcomp","modten","perm_m","perm_k0","mechr2")
+names(df) <- namestr
+
+# Convert to factors
+df$pat <-as_factor(df$pat)
+df$plug <- as.character(df$plug) %>% as_factor()
+df$score <- as.character(df$score) %>% ordered()
+
+# Reorder patient levels
+levels(df$pat) <- levels(df$pat)[c(5,3,4,1,2)]
+
+# Gather diffusion measurements in a single column
+df <- df %>% gather("FCS_FITC","RICS_FITC","FCS_3k","RICS_3k", key = "ICS_molecule",value = "diff")
+
+# Separate ICS technique and solute. Covnert to factors
+df <- df %>% 
+    separate(ICS_molecule, into = c("ICS","sol"))
+df$ICS <-as_factor(df$ICS)
+df$sol <-as_factor(df$sol)
+# rearrange column order
+df <- df %>%
+    select(pat:score,ICS:diff,everything())
+
+df
+```
+## Exploring the data
+### Diffusivity
+First, let's get a broad overview of our data just looking at how our measurements vary with OA score.
+```{r}
+ggplot(df, aes(x = score, y = diff, color = sol, shape = ICS)) + 
+  geom_point() +
+  scale_colour_brewer(palette = "Dark2")
+```
+The expected effect of molecule size on diffusivity is obvious here.  3k dextran is almost 10 times larger than FITC.  Thus, we would expect it to have a much lower diffusivity.  It's hard to tell the difference between the two imaging techniques so let's break them out.  We'll also fit to a linear model to get trendlines and confidence intervals for each technique and solute.
+```{r}
+ggplot(df, aes(x = as.double(score), y = diff, color = sol, shape = ICS)) + 
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(~ ICS) +
+  scale_colour_brewer(palette = "Dark2")
+```
+It appears that diffusivity increases with increasing OA score, for both measurement techniques and solutes.  Now let's see how close the measurements for FCS and RICS are by plotting diffusivity grouped by measurement technique.
+```{r}
+dfICS <- spread(df, key = ICS, value = diff);
+ggplot(dfICS, aes(x = FCS, y = RICS)) +
+    geom_point(aes(color = sol)) +
+    geom_smooth(method = "lm") +
+    scale_colour_brewer(palette = "Dark2")
+```
+There is a tight linear relationship between the measurement techniques.  They might differ by solute size though.  Let's check.
+```{r}
+ggplot(dfICS, aes(x = FCS, y = RICS)) +
+    geom_point(aes(color = sol)) +
+    geom_smooth(method = "lm", aes(group = sol)) +
+    scale_colour_brewer(palette = "Dark2")
+```
+It looks like the slopes about the same but that there is an offset between sizes.
+
+### Mechanical Properties
+Do mechanical properties vary with score?  We'll plot keep using a continuous score variable so we can fit a linear model to the data.
+```{r}
+ggplot(df,aes(as.double(score),modcomp)) + geom_point(aes(color = pat)) + geom_smooth(method = "lm")
+ggplot(df,aes(as.double(score),modten)) + geom_point(aes(color = pat)) + geom_smooth(method = "lm")
+ggplot(df,aes(as.double(score),perm_m)) + geom_point(aes(color = pat)) + geom_smooth(method = "lm")
+ggplot(df,aes(as.double(score),perm_k0)) + geom_point(aes(color = pat)) + geom_smooth(method = "lm")
+```
+The data appear to indicate that both compressive and tensile moduli decrease while both permeability parameters increase.  This matches what the literature says about mechanical changes and OA severity.
+
+Looking at the colors for each patient, there is no clear stratification.  Now may be a good time to look at patient variability.
+
+### Mechanical Properties - Patient Variability
+
+```{r}
+ggplot(df,aes(as.double(score),modcomp,color = pat)) + 
+  geom_point() + 
+  geom_smooth(method = "lm")
+ggplot(df,aes(as.double(score),modten,color = pat)) + 
+  geom_point() + 
+  geom_smooth(method = "lm")
+ggplot(df,aes(as.double(score),perm_m,color = pat)) + 
+  geom_point() + 
+  geom_smooth(method = "lm")
+ggplot(df,aes(as.double(score),perm_k0,color = pat)) + 
+  geom_point() + 
+  geom_smooth(method = "lm")
+```
+
+The trends within a single patient can vary signficantly.  We expected a lot of noise to the data since our method of scoring the cartilage was a newly trained graduate student as opposed to an experienced orthopedic surgeon, who would normally be the one using the ICRS system to score cartilage.
+
