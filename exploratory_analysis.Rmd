@@ -1,9 +1,11 @@
 ---
 title: 'Human OA Diffusion Study: Exploratory Analysis'
+author: "Brian Graham" 
 output:
-  pdf_document: default
   html_document:
+    keep_md: true 
     df_print: paged
+  pdf_document: default
 ---
 
 This notebook provides a first look at the data aquired as part of the FCS/RICS study of human osteoarthritic (OA) cartilage.
