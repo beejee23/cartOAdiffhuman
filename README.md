@@ -1,4 +1,4 @@
-# cartOAdiffhuman
+# cartOAdiffhuman: Study of Solute Diffusion in Osteoarthritic Human Cartilage
 Analysis of diffusivity of molecules in osteoarthritic human cartilage as measured by image correlation spectroscopy techniques.  This repo contains all of the collated data, analyses, and code used to generate the plots for the submitted publication.
 
 Check out the exploratory_analysis//exploratory_analysis.md file for a good overview of the study with early visualizations of the data.  Otherwise, here si a bried synopsis below...
