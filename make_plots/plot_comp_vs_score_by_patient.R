@@ -3,7 +3,7 @@ library(tidyverse)
 library(cowplot)
 
 source('~/RProjects/cartilage_human_diffusion_study/import_data.R')
-dir_fig_out <- "results/figures"
+dir_fig_out <- "~/RProjects/cartilage_human_diffusion_study/results/figures"
 df_sample$pat = fct_recode(df_sample$pat,"Patient 1" = "1","Patient 2" = "2","Patient 3" = "3","Patient 4" = "4","Patient 5" = "5")
 
 p1 <- ggplot(df_sample, aes(x = score, y = hydrox,color = pat)) +

@@ -5,7 +5,7 @@ library(car)
 
 
 source('~/RProjects/cartilage_human_diffusion_study/import_data.R')
-dir_fig_out <- "results/figures"
+dir_fig_out <- "~/RProjects/cartilage_human_diffusion_study/results/figures"
 
 # Rename levels for plotting
 levels(df_ICS$sol) <- c(levels(df_ICS$sol)[1],"3k Dextran")

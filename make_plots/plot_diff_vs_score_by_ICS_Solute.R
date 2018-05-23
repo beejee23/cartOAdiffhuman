@@ -2,7 +2,7 @@
 library(tidyverse)
 
 source('~/RProjects/cartilage_human_diffusion_study/import_data.R')
-dir_fig_out <- "results/figures"
+dir_fig_out <- "~/RProjects/cartilage_human_diffusion_study/results/figures"
 
 # Rename levels for plotting
 levels(df$sol) <- c(levels(df$sol)[1],"3k Dextran")

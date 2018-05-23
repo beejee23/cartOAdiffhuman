@@ -3,7 +3,7 @@ library(tidyverse)
 library(cowplot)
 
 source('~/RProjects/cartilage_human_diffusion_study/import_data.R')
-dir_fig_out <- "results/figures"
+dir_fig_out <- "~/RProjects/cartilage_human_diffusion_study/results/figures"
 
 ## Plot hydrox
 pa <- ggplot(df_sample, aes(x = score, y = hydrox)) +

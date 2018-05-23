@@ -3,7 +3,7 @@ library(tidyverse)
 library(cowplot)
 
 source('~/RProjects/cartilage_human_diffusion_study/import_data.R')
-dir_fig_out <- "results/figures"
+dir_fig_out <- "~/RProjects/cartilage_human_diffusion_study/results/figures"
 
 corr_eqn <- function(x,y, digits = 3) {
   sum_stats <- cor.test(x, y, method = "pearson",conf.level = 0.95)
