@@ -1,0 +1,196 @@
+---
+title: "Paper Stats"
+output: html_notebook
+---
+
+## Load Dependencies
+```{r}
+# Libraries
+library(tidyverse)
+library(lme4)
+library(car)
+library(corrplot)
+library(cowplot)
+# Import data
+source('~/RProjects/cartilage_human_diffusion_study/import_data.R')
+
+```
+## FCS vs RICS
+```{r}
+# Correlation
+ICS_cor_test <- cor.test(df_ICS$RICS,df_ICS$FCS)
+ICS_cor_test
+
+# Linear Regression
+fit_ICS <- lm(RICS ~ FCS, data=df_ICS)
+fit_ICS
+summary(fit_ICS)
+
+# Get predictions and residuals for plotting
+df_ICS$predicted <- predict(fit_ICS)   # Save the predicted values
+df_ICS$residuals <- residuals(fit_ICS) # Save the residual values
+
+# Plot fit with residuals
+p1 <- ggplot(df_ICS, aes(x = FCS, y = RICS)) +
+  geom_smooth(method = "lm", se = FALSE, color = "lightgrey") +  # Plot regression slope
+  geom_segment(aes(xend = FCS, yend = predicted), alpha = .2) +  # alpha to fade lines
+  geom_point(aes(color = abs(residuals))) +
+  scale_color_continuous(low = "black", high = "red") +
+  guides(color = FALSE, size = FALSE) +
+  geom_point(aes(y = predicted), shape = 1) +guides(alpha = FALSE)
+
+# Plot residuals
+p2 <- ggplot(df_ICS, aes(x = FCS, y = residuals)) +
+  geom_point() +
+  labs(x = "FCS",y = "Residuals")
+
+# Combine plots
+plot_grid(p1, p2)
+```
+## Paired t-test to compare the means of the solute diffusivities grouped by technique.
+```{r}
+stats_FITC <- t.test(df_sample$`FITC_FCS`,df_sample$`3k_FCS`,paired = TRUE)
+stats_3k <- t.test(df_sample$`FITC_RICS`,df_sample$`3k_RICS`,paired = TRUE)
+stats_FITC
+stats_3k
+```
+
+
+## Diffusion Coefficient vs Score
+```{r functionalized plotting,include=FALSE}
+plot_lm_residuals <- function(data, x, y) {
+
+  # Fit model
+  fit <- eval(substitute(lm(y ~ x, data=data)))
+  fit
+  
+  # Get predictions and residuals for plotting
+  data$predicted <- predict(fit)   # Save the predicted values
+  data$residuals <- residuals(fit) # Save the residual values
+  
+  # # Plot fit with residuals
+  p1 <- eval(substitute(
+    ggplot(data, aes(x = x, y = y)) +
+      geom_smooth(method = "lm", se = FALSE, color = "lightgrey") +  # Plot regression slope
+      geom_jitter(aes(color = abs(residuals)),width = 0.2, height = 0) + # scale residuals by color
+      scale_color_continuous(low = "black", high = "red") + # set color scale to black/red
+      guides(color = FALSE, size = FALSE) + # turn off legends
+      geom_point(aes(y = predicted), shape = 1) +guides(alpha = FALSE) # fade predicted point on fit lines
+  ))
+  
+  # # Plot residuals
+  p2 <- eval(substitute(
+    ggplot(data, aes(x = x, y = residuals)) +
+      geom_jitter(width = 0.2, height = 0) +
+      labs(x = "FCS",y = "Residuals")
+  )) 
+  # Combine plots
+  p_combined <- plot_grid(p1, p2)
+  p_combined
+  
+}
+
+```
+
+```{r}
+
+data_FCS_FITC = subset(df,ICS =='FCS' & sol =='FITC')
+data_FCS_3k = subset(df,ICS =='FCS' & sol =='3k')
+data_RICS_FITC = subset(df,ICS =='RICS' & sol =='FITC')
+data_RICS_3k = subset(df,ICS =='RICS' & sol =='3k')
+data_anom_FITC = subset(df_anom,ICS_molecule =='anom_FITC')
+data_anom_3k = subset(df_anom,ICS_molecule =='anom_3k')
+
+fit_diff_FCS_FITC <- lm(diff~score, data = data_FCS_FITC)
+fit_diff_FCS_3k <- lm(diff~score, data = data_FCS_3k)
+fit_diff_RICS_FITC <- lm(diff~score, data = data_RICS_FITC)
+fit_diff_RICS_3k <- lm(diff~score, data = data_RICS_3k)
+fit_diff_anom_FITC <- lm(anom~score, data = data_anom_FITC)
+fit_diff_anom_3k <- lm(anom~score, data = data_anom_3k)
+
+p <- plot_lm_residuals(data_FCS_FITC,score,diff)
+summary(fit_diff_FCS_FITC)
+p
+p <- plot_lm_residuals(data_FCS_3k,score,diff)
+summary(fit_diff_FCS_3k)
+p
+p <- plot_lm_residuals(data_RICS_FITC,score,diff)
+summary(fit_diff_RICS_FITC)
+p
+p <- plot_lm_residuals(data_RICS_3k,score,diff)
+summary(fit_diff_RICS_3k)
+p
+p <- plot_lm_residuals(data_anom_FITC,score,anom)
+summary(fit_diff_anom_FITC)
+p
+p <- plot_lm_residuals(data_anom_3k,score,anom)
+summary(fit_diff_anom_3k)
+p
+
+```
+
+## Mechanical Properties vs Score
+
+```{r}
+fit_modcomp <- lm(modcomp~score, data = df_sample)
+fit_modten <- lm(modten~score, data = df_sample)
+fit_perm_k0 <- lm(perm_k0~score, data = df_sample)
+fit_perm_m <- lm(perm_m~score, data = df_sample)
+
+p <- plot_lm_residuals(df_sample,score,modcomp)
+summary(fit_modcomp)
+p
+p <- plot_lm_residuals(df_sample,score,modten)
+summary(fit_modten)
+p
+p <- plot_lm_residuals(df_sample,score,perm_k0)
+summary(fit_perm_k0)
+p
+p <- plot_lm_residuals(df_sample,score,perm_m)
+summary(fit_perm_m)
+p
+
+
+
+```
+
+## Compositional Properties vs Score
+```{r}
+fit_hydrox <- lm(hydrox~score, data = df_sample)
+fit_gag <- lm(gag~score, data = df_sample)
+
+p <- plot_lm_residuals(df_sample,score,hydrox)
+summary(fit_hydrox)
+p
+p <- plot_lm_residuals(df_sample,score,gag)
+summary(fit_gag)
+p
+
+```
+
+
+
+
+
+## Correlation of Mechanical Properties and Diffusivity Measures
+```{r}
+# get only double values
+df_dbonly <- select(df_sample,modcomp:FITC_RICS,-mechr2)
+
+# Rename columns
+names(df_dbonly) <- c("Compressive Modulus","Tensile Modulus","Permeability M","Permeability k0",
+                      "Hydroxyproline","GAG","Anom. FITC","Anom 3k",
+                      "Diff. 3k / FCS","Diff. 3k / RICS","Diff. FITC / FCS","Diff. FITC / RICS")
+
+# Correlation matrix and p values
+M <- cor(df_dbonly)
+Mtest <- cor.mtest(df_dbonly, conf.level = .95)
+M <- as.data.frame(M)
+pvals <- Mtest$p
+rownames(pvals) <- rownames(M)
+colnames(pvals) <- colnames(M)
+pvals <- as.data.frame(pvals)
+M
+pvals
+```
+

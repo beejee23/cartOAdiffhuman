@@ -1,9 +1,6 @@
 ---
 title: 'Human OA Diffusion Study: Exploratory Analysis'
-author: "Brian Graham" 
-output:
-  html_document:
-    keep_md: true 
+output: html_notebook
 ---
 
 This notebook provides a first look at the data aquired as part of the FCS/RICS study of human osteoarthritic (OA) cartilage.
@@ -96,11 +93,20 @@ ggplot(df, aes(x = score, y = diff, color = sol, shape = ICS)) +
 ```
 The expected effect of molecule size on diffusivity is obvious here.  3k dextran is almost 10 times larger than FITC.  Thus, we would expect it to have a much lower diffusivity.  It's hard to tell the difference between the two imaging techniques so let's break them out.  We'll also fit to a linear model to get trendlines and confidence intervals for each technique and solute.
 ```{r}
-ggplot(df, aes(x = as.double(score)-1, y = diff, color = sol, shape = ICS)) + 
-  geom_jitter(width = 0.1, height = 0) +
+ggplot(df, aes(x = as.double(score)-1, y = diff, color = sol)) + 
+  geom_jitter(width = 0.025, height = 0) +
   geom_smooth(method = "lm") +
   facet_wrap(~ ICS) +
-  scale_colour_brewer(palette = "Dark2")
+  scale_colour_brewer(palette = "Dark2") +
+  scale_x_continuous(breaks = seq(0, 2, by = 1)) +
+  theme_bw()+
+  labs(
+    x = "ICRS Score",
+    y = expression (Diffusion~Coefficient~(mm^2/s)),
+    colour = "Solute"
+    )
+
+ggsave("figures/diffusion_vs_score.pdf")
 ```
 It appears that diffusivity increases with increasing OA score, for both measurement techniques and solutes.  Now let's see how close the measurements for FCS and RICS are by plotting diffusivity grouped by measurement technique.
 ```{r}
@@ -152,8 +158,17 @@ ggplot(dfmech,aes(as.double(score)-1,perm_m)) +
   geom_jitter(width = 0.025, height = 0,aes(color = pat)) + 
   geom_smooth(method = "lm")
 ggplot(dfmech,aes(as.double(score)-1,perm_k0)) + 
-  geom_jitter(width = 0.025, height = 0,aes(color = pat)) + 
-  geom_smooth(method = "lm")
+  geom_jitter(width = 0.025, height = 0,aes(shape = pat)) + 
+  geom_smooth(method = "lm") +
+  scale_x_continuous(breaks = seq(0, 2, by = 1)) +
+  theme_bw()+
+  labs(
+    x = "ICRS Score",
+    y = expression (Permeability (mm^2/s)),
+    shape = "Patient"
+    )
+
+ggsave("figures/permk0_vs_score.pdf")
 
 ```
 The data appear to indicate that both compressive and tensile moduli decrease while both permeability parameters increase.  This matches what the literature says about mechanical changes and OA severity.
@@ -207,9 +222,17 @@ Diffusivity is determined by a combination molecular and environment properties.
 Permeability is up first.
 ```{r}
 ggplot(df, aes(x = perm_k0, y = diff)) +
-    geom_point(aes(color = score, shape = score)) +
-    geom_smooth(method = "lm") +
-    facet_grid(ICS ~ sol)
+  geom_point(aes()) +
+  geom_smooth(method = "lm") +
+  facet_grid(ICS ~ sol) +
+  theme_bw()+
+  labs(
+    y = expression (Diffusion~Coefficienct~(mm^2/s)),
+    x = expression (Permeability),
+    shape = "Patient"
+  )
+ggsave("figures/diff_vs_permk0.pdf")
+
 ggplot(df, aes(x = perm_m, y = diff)) +
     geom_point(aes(color = score, shape = score)) +
     geom_smooth(method = "lm") +
@@ -231,3 +254,52 @@ ggplot(df, aes(x = modten, y = diff)) +
 Interestingly, we see a strong negative correlation of diffusivity and modulus.  What does this mean?  If high modulus is associated with healthier cartilage, it may have a more intact matrix (i.e. more dense collagen network) compared to more degraded cartialge on the ICRS scale.
 
 It will be interesting to see what the compositional assays reveal...
+```{r}
+
+#stats fig b
+stats_diff_FCS_FITC <- lm(diff~score, data = subset(df,ICS =='FCS' & sol =='FITC'))
+stats_diff_FCS_3k <- lm(diff~score, data = subset(df,ICS =='FCS' & sol =='3k'))
+stats_diff_RICS_FITC <- lm(diff~score, data = subset(df,ICS =='RICS' & sol =='FITC'))
+stats_diff_RICS_3k <- lm(diff~score, data = subset(df,ICS =='RICS' & sol =='3k'))
+
+summary(stats_diff_FCS_FITC)$r.squared
+anova(stats_diff_FCS_FITC)$'Pr(>F)'[1]
+
+summary(stats_diff_FCS_3k)$r.squared
+anova(stats_diff_FCS_3k)$'Pr(>F)'[1]
+
+summary(stats_diff_RICS_FITC)$r.squared
+anova(stats_diff_RICS_FITC)$'Pr(>F)'[1]
+
+summary(stats_diff_RICS_3k)$r.squared
+anova(stats_diff_RICS_3k)$'Pr(>F)'[1]
+
+#stats fig c
+stats_perm_k0 <- lm(perm_k0~score, data = df)
+
+summary(stats_perm_k0)$r.squared
+anova(stats_perm_k0)$'Pr(>F)'[1]
+
+#stats fig d
+stats_diff_perm_FCS_FITC <- lm(diff~perm_k0, data = subset(df,ICS =='FCS' & sol =='FITC'))
+stats_diff_perm_FCS_3k <- lm(diff~perm_k0, data = subset(df,ICS =='FCS' & sol =='3k'))
+stats_diff_perm_RICS_FITC <- lm(diff~perm_k0, data = subset(df,ICS =='RICS' & sol =='FITC'))
+stats_diff_perm_RICS_3k <- lm(diff~perm_k0, data = subset(df,ICS =='RICS' & sol =='3k'))
+
+summary(stats_diff_perm_FCS_FITC)$r.squared
+anova(stats_diff_perm_FCS_FITC)$'Pr(>F)'[1]
+
+summary(stats_diff_perm_FCS_3k)$r.squared
+anova(stats_diff_perm_FCS_3k)$'Pr(>F)'[1]
+
+summary(stats_diff_perm_RICS_FITC)$r.squared
+anova(stats_diff_perm_RICS_FITC)$'Pr(>F)'[1]
+
+summary(stats_diff_perm_RICS_3k)$r.squared
+anova(stats_diff_perm_RICS_3k)$'Pr(>F)'[1]
+
+
+
+
+```
+
